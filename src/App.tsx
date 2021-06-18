@@ -54,7 +54,11 @@ class Panel {
     this.split = split;
   }
 
-  key = () => this.i * (this.split + 2) + this.j;
+  calcKey = (i: number, j: number) => i * (this.split + 2) + j;
+
+  key = () => this.calcKey(this.i, this.j);
+
+  isRightPosition = (i: number, j: number) => this.calcKey(i, j) === this.key();
 
   isLowerRight = () => this.i === this.split && this.j === this.split;
 }
@@ -68,9 +72,11 @@ const App: VFC = () => {
   const [ratio, setRatio] = useState('100%');
   const [split] = useState(4);
   const [panels, setPanels] = useState<Panel[][]>([]);
+  const [solved, setSolved] = useState(false);
 
   useEffect(() => {
     // 初期化
+    setSolved(false);
     const array = [...Array<Panel[]>(split + 2)].map(() =>
       Array<Panel>(split + 2).fill(new Panel(-1, -1, split))
     );
@@ -126,6 +132,14 @@ const App: VFC = () => {
     };
   };
 
+  const judgeSolved = (newPanels: Panel[][]): boolean => {
+    let res = true;
+    for (let i = 0; i < split + 2; i += 1)
+      for (let j = 0; j < split + 2; j += 1)
+        if (!newPanels[i][j].isRightPosition(i, j)) res = false;
+    return res;
+  };
+
   const onClick = (i: number, j: number) => {
     for (let k = 0; k < 4; k += 1) {
       const [ni, nj] = [i + di[k], j + dj[k]];
@@ -136,6 +150,7 @@ const App: VFC = () => {
         newPanels[i][j] = panels[ni][nj];
         newPanels[ni][nj] = panels[i][j];
         setPanels(newPanels);
+        setSolved(judgeSolved(newPanels));
         return;
       }
     }
@@ -189,7 +204,7 @@ const App: VFC = () => {
                               paddingTop: ratio,
                             }}
                           >
-                            {!el.isLowerRight() && (
+                            {(!el.isLowerRight() || solved) && (
                               <>
                                 <img
                                   src={imageData}
@@ -199,13 +214,15 @@ const App: VFC = () => {
                                     transform: transform(el.i, el.j),
                                   }}
                                 />
-                                <button
-                                  type="button"
-                                  className={classes.button}
-                                  onClick={() => onClick(i, j)}
-                                >
-                                  {' '}
-                                </button>
+                                {!solved && (
+                                  <button
+                                    type="button"
+                                    className={classes.button}
+                                    onClick={() => onClick(i, j)}
+                                  >
+                                    {' '}
+                                  </button>
+                                )}
                               </>
                             )}
                           </div>
@@ -217,6 +234,13 @@ const App: VFC = () => {
               })}
             </Grid>
           </>
+        )}
+        {solved && (
+          <Grid item container justify="center">
+            <Typography component="h1" variant="h5">
+              Congratulations!!
+            </Typography>
+          </Grid>
         )}
       </Grid>
     </Container>
