@@ -11,6 +11,9 @@ import { createStyles, makeStyles } from '@material-ui/core/styles';
 
 const useStyles = makeStyles(() =>
   createStyles({
+    container: {
+      userSelect: 'none',
+    },
     imgWrapper: {
       position: 'relative',
       width: '100%',
@@ -24,14 +27,16 @@ const useStyles = makeStyles(() =>
       height: '100%',
       objectFit: 'cover',
     },
-    outline: {
+    button: {
       position: 'absolute',
       top: 0,
       left: 0,
       width: '100%',
       height: '100%',
-      outline: '1px solid black',
-      outlineOffset: -1,
+      backgroundColor: 'transparent',
+      color: 'transparent',
+      cursor: 'pointer',
+      padding: 0,
     },
   })
 );
@@ -49,10 +54,13 @@ class Panel {
     this.split = split;
   }
 
-  key(): number {
-    return this.i * (this.split + 2) + this.j;
-  }
+  key = () => this.i * (this.split + 2) + this.j;
+
+  isLowerRight = () => this.i === this.split && this.j === this.split;
 }
+
+const di = [-1, 0, 0, 1];
+const dj = [0, -1, 1, 0];
 
 const App: VFC = () => {
   const classes = useStyles();
@@ -62,16 +70,32 @@ const App: VFC = () => {
   const [panels, setPanels] = useState<Panel[][]>([]);
 
   useEffect(() => {
+    // 初期化
     const array = [...Array<Panel[]>(split + 2)].map(() =>
       Array<Panel>(split + 2).fill(new Panel(-1, -1, split))
     );
     for (let i = 0; i < split + 2; i += 1)
       for (let j = 0; j < split + 2; j += 1)
         array[i][j] = new Panel(i, j, split);
-    setPanels(array);
-  }, [split]);
 
-  const xs = (12 / split) as GridSize;
+    // シャッフル
+    let i = split;
+    let j = split;
+    for (let l = 0; l < 1000; l += 1) {
+      const k = Math.floor(Math.random() * 4);
+      const [ni, nj] = [i + di[k], j + dj[k]];
+      if (ni >= 1 && ni <= split && nj >= 1 && nj <= split) {
+        const p = new Panel(array[i][j].i, array[i][j].j, split);
+        const np = new Panel(array[ni][nj].i, array[ni][nj].j, split);
+        array[ni][nj] = p;
+        array[i][j] = np;
+        [i, j] = [ni, nj];
+      }
+    }
+    setPanels(array);
+  }, [split, imageData]);
+
+  const xs = Math.floor(12 / split) as GridSize;
   const buttonText = imageData ? 'Select another image' : 'Select image';
 
   const transform = (i: number, j: number) => {
@@ -102,14 +126,45 @@ const App: VFC = () => {
     };
   };
 
+  const onClick = (i: number, j: number) => {
+    for (let k = 0; k < 4; k += 1) {
+      const [ni, nj] = [i + di[k], j + dj[k]];
+      if (panels[ni][nj].isLowerRight()) {
+        const newPanels = panels.map((row) =>
+          row.map((panel) => new Panel(panel.i, panel.j, split))
+        );
+        newPanels[i][j] = panels[ni][nj];
+        newPanels[ni][nj] = panels[i][j];
+        setPanels(newPanels);
+        return;
+      }
+    }
+  };
+
   return (
-    <Container component="main" maxWidth="xs">
+    <Container component="main" maxWidth="xs" className={classes.container}>
       <CssBaseline />
       <Grid container spacing={4}>
         <Grid item container justify="center">
           <Typography component="h1" variant="h5">
             Slide Puzzle Maker
           </Typography>
+        </Grid>
+        <Grid item container justify="center">
+          <Button
+            fullWidth={!imageData}
+            variant="contained"
+            color="primary"
+            component="label"
+          >
+            {buttonText}
+            <input
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={onChangeInput}
+            />
+          </Button>
         </Grid>
         {imageData && (
           <>
@@ -134,15 +189,25 @@ const App: VFC = () => {
                               paddingTop: ratio,
                             }}
                           >
-                            <img
-                              src={imageData}
-                              alt="選択画像"
-                              className={classes.img}
-                              style={{
-                                transform: transform(el.i, el.j),
-                              }}
-                            />
-                            <div className={classes.outline} />
+                            {!el.isLowerRight() && (
+                              <>
+                                <img
+                                  src={imageData}
+                                  alt="選択画像"
+                                  className={classes.img}
+                                  style={{
+                                    transform: transform(el.i, el.j),
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  className={classes.button}
+                                  onClick={() => onClick(i, j)}
+                                >
+                                  {' '}
+                                </button>
+                              </>
+                            )}
                           </div>
                         </Grid>
                       );
@@ -153,22 +218,6 @@ const App: VFC = () => {
             </Grid>
           </>
         )}
-        <Grid item container justify="center">
-          <Button
-            fullWidth={!imageData}
-            variant="contained"
-            color="primary"
-            component="label"
-          >
-            {buttonText}
-            <input
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={onChangeInput}
-            />
-          </Button>
-        </Grid>
       </Grid>
     </Container>
   );
