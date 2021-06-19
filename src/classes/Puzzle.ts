@@ -45,21 +45,24 @@ export default class Puzzle {
     this.split = split;
   }
 
-  onClick = (i: number, j: number): Puzzle => {
+  getMovingDirection = (i: number, j: number): [number, number] => {
     for (let k = 0; k < 4; k += 1) {
       const [ni, nj] = [i + di[k], j + dj[k]];
-      if (this.panels[ni][nj].isLowerRight) {
-        const newPanels = this.panels.map((row) =>
-          row.map((panel) => new Panel(panel.i, panel.j, panel.isLowerRight))
-        );
-        newPanels[i][j] = this.panels[ni][nj];
-        newPanels[ni][nj] = this.panels[i][j];
-        const newPuzzle = new Puzzle(this.split, false);
-        newPuzzle.panels = newPanels;
-        return newPuzzle;
-      }
+      if (this.panels[ni][nj].isLowerRight) return [di[k], dj[k]];
     }
-    return this;
+    return [0, 0];
+  };
+
+  move = (i: number, j: number, ei: number, ej: number): Puzzle => {
+    const [ni, nj] = [i + ei, j + ej];
+    const newPanels = this.panels.map((row) =>
+      row.map((panel) => new Panel(panel.i, panel.j, panel.isLowerRight))
+    );
+    newPanels[i][j] = this.panels[ni][nj];
+    newPanels[ni][nj] = this.panels[i][j];
+    const newPuzzle = new Puzzle(this.split, false);
+    newPuzzle.panels = newPanels;
+    return newPuzzle;
   };
 
   solved = (): boolean => {

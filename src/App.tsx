@@ -8,12 +8,16 @@ import {
   Typography,
 } from '@material-ui/core';
 import { createStyles, makeStyles } from '@material-ui/core/styles';
+import { Transition } from 'react-transition-group';
 import Puzzle from './classes/Puzzle';
 
 const useStyles = makeStyles(() =>
   createStyles({
     container: {
       userSelect: 'none',
+    },
+    row: {
+      backgroundColor: 'lightgray',
     },
     imgWrapper: {
       position: 'relative',
@@ -42,23 +46,42 @@ const useStyles = makeStyles(() =>
   })
 );
 
+type Trans = {
+  i: number;
+  j: number;
+  di: number;
+  dj: number;
+};
+
 const App: VFC = () => {
   const classes = useStyles();
   const [imageData, setImageData] = useState<string | undefined>(undefined);
   const [ratio, setRatio] = useState('100%');
   const [puzzle, setPuzzle] = useState<Puzzle>(new Puzzle(4, false));
+  const [trans, setTrans] = useState<Trans>({ i: -1, j: -1, di: 0, dj: 0 });
 
   useEffect(() => {
     setPuzzle((prevPuzzle) => new Puzzle(prevPuzzle.split, true));
   }, [imageData]);
 
+  const duration = 100;
   const xs = Math.floor(12 / puzzle.split) as GridSize;
   const buttonText = imageData ? 'Select another image' : 'Select image';
 
-  const transform = (i: number, j: number) => {
+  const imgTransform = (i: number, j: number) => {
     const x = 0.5 - (j - 0.5) / puzzle.split;
     const y = 0.5 - (i - 0.5) / puzzle.split;
     return `scale(${puzzle.split}) translate(${x * 100}%, ${y * 100}%) `;
+  };
+
+  const gridTransition = (state: string) =>
+    state === 'entering' ? `all ${duration}ms ease-in-out` : 'none';
+
+  const gridTransform = (state: string) => {
+    const enter = state === 'entering' || state === 'entered';
+    const x = enter ? trans.dj * 100 : 0;
+    const y = enter ? trans.di * 100 : 0;
+    return `translate(${x}%, ${y}%)`;
   };
 
   const onChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,8 +107,15 @@ const App: VFC = () => {
   };
 
   const onClick = (i: number, j: number) => {
-    const newPuzzle = puzzle.onClick(i, j);
+    const [di, dj] = puzzle.getMovingDirection(i, j);
+    if (di === 0 && dj === 0) return;
+    setTrans({ i, j, di, dj });
+  };
+
+  const onEntered = () => {
+    const newPuzzle = puzzle.move(trans.i, trans.j, trans.di, trans.dj);
     setPuzzle(newPuzzle);
+    setTrans({ i: -1, j: -1, di: 0, dj: 0 });
   };
 
   return (
@@ -119,46 +149,64 @@ const App: VFC = () => {
               {puzzle.panels.map((row, i) => {
                 if (i < 1 || puzzle.split < i) return null;
                 return (
-                  <Grid item container direction="row" key={row[0].key()}>
+                  <Grid
+                    item
+                    container
+                    direction="row"
+                    key={row[0].key()}
+                    className={classes.row}
+                  >
                     {row.map((el, j) => {
                       if (j < 1 || puzzle.split < j) return null;
                       return (
-                        <Grid
-                          item
-                          container
+                        <Transition
                           key={el.key()}
-                          xs={xs}
-                          justify="center"
+                          in={trans.i === i && trans.j === j}
+                          timeout={duration}
+                          onEntered={onEntered}
                         >
-                          <div
-                            className={classes.imgWrapper}
-                            style={{
-                              paddingTop: ratio,
-                            }}
-                          >
-                            {(!el.isLowerRight || puzzle.solved()) && (
-                              <>
-                                <img
-                                  src={imageData}
-                                  alt="選択画像"
-                                  className={classes.img}
-                                  style={{
-                                    transform: transform(el.i, el.j),
-                                  }}
-                                />
-                                {!puzzle.solved() && (
-                                  <button
-                                    type="button"
-                                    className={classes.button}
-                                    onClick={() => onClick(i, j)}
-                                  >
-                                    {' '}
-                                  </button>
+                          {(state) => (
+                            <Grid
+                              item
+                              container
+                              xs={xs}
+                              justify="center"
+                              style={{
+                                transition: gridTransition(state),
+                                transform: gridTransform(state),
+                              }}
+                            >
+                              <div
+                                className={classes.imgWrapper}
+                                style={{
+                                  paddingTop: ratio,
+                                }}
+                              >
+                                {(!el.isLowerRight || puzzle.solved()) && (
+                                  <>
+                                    <img
+                                      src={imageData}
+                                      alt="選択画像"
+                                      className={classes.img}
+                                      style={{
+                                        transform: imgTransform(el.i, el.j),
+                                      }}
+                                    />
+                                    {!puzzle.solved() && (
+                                      <button
+                                        type="button"
+                                        className={classes.button}
+                                        onClick={() => onClick(i, j)}
+                                      >
+                                        {' '}
+                                      </button>
+                                    )}
+                                  </>
                                 )}
-                              </>
-                            )}
-                          </div>
-                        </Grid>
+                              </div>
+                            </Grid>
+                          )}
+                        </Transition>
                       );
                     })}
                   </Grid>
