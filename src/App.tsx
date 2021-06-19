@@ -135,7 +135,7 @@ const App: VFC = () => {
   };
 
   const tweet = () => {
-    const text = `ryochansq.github.io/slide-puzzle/\n\n#なんでもスライドパズル`;
+    const text = `スライドパズルを完成させました！\n\nryochansq.github.io/slide-puzzle/\n\n#なんでもスライドパズル`;
     const encodedText = encodeURIComponent(text);
     const intent = `https://twitter.com/intent/tweet?text=${encodedText}`;
     window.open(intent);
