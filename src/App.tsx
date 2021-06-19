@@ -2,14 +2,25 @@ import { VFC, useState, useEffect } from 'react';
 import {
   Button,
   Container,
+  createMuiTheme,
   CssBaseline,
   Grid,
   GridSize,
+  Link,
+  ThemeProvider,
   Typography,
 } from '@material-ui/core';
 import { createStyles, makeStyles } from '@material-ui/core/styles';
 import { Transition } from 'react-transition-group';
 import Puzzle from './classes/Puzzle';
+
+const theme = createMuiTheme({
+  palette: {
+    secondary: {
+      main: '#00acee',
+    },
+  },
+});
 
 const useStyles = makeStyles(() =>
   createStyles({
@@ -43,6 +54,11 @@ const useStyles = makeStyles(() =>
       cursor: 'pointer',
       padding: 0,
     },
+    twitter: {
+      color: 'white',
+      fontWeight: 700,
+      textTransform: 'none',
+    },
   })
 );
 
@@ -66,7 +82,7 @@ const App: VFC = () => {
 
   const duration = 100;
   const xs = Math.floor(12 / puzzle.split) as GridSize;
-  const buttonText = imageData ? 'Select another image' : 'Select image';
+  const buttonText = imageData ? '別の画像を選択' : 'パズルにしたい画像を選択';
 
   const imgTransform = (i: number, j: number) => {
     const x = 0.5 - (j - 0.5) / puzzle.split;
@@ -118,33 +134,40 @@ const App: VFC = () => {
     setTrans({ i: -1, j: -1, di: 0, dj: 0 });
   };
 
+  const tweet = () => {
+    const text = `ryochansq.github.io/slide-puzzle/\n\n#なんでもスライドパズル`;
+    const encodedText = encodeURIComponent(text);
+    const intent = `https://twitter.com/intent/tweet?text=${encodedText}`;
+    window.open(intent);
+  };
+
   return (
-    <Container component="main" maxWidth="xs" className={classes.container}>
-      <CssBaseline />
-      <Grid container spacing={4}>
-        <Grid item container justify="center">
-          <Typography component="h1" variant="h5">
-            Slide Puzzle Maker
-          </Typography>
-        </Grid>
-        <Grid item container justify="center">
-          <Button
-            fullWidth={!imageData}
-            variant="contained"
-            color="primary"
-            component="label"
-          >
-            {buttonText}
-            <input
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={onChangeInput}
-            />
-          </Button>
-        </Grid>
-        {imageData && (
-          <>
+    <ThemeProvider theme={theme}>
+      <Container component="main" maxWidth="xs" className={classes.container}>
+        <CssBaseline />
+        <Grid container spacing={4}>
+          <Grid item container justify="center">
+            <Typography component="h1" variant="h5">
+              なんでもスライドパズル
+            </Typography>
+          </Grid>
+          <Grid item container justify="center">
+            <Button
+              fullWidth={!imageData}
+              variant="contained"
+              color="primary"
+              component="label"
+            >
+              {buttonText}
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={onChangeInput}
+              />
+            </Button>
+          </Grid>
+          {imageData && (
             <Grid item container xs={12}>
               {puzzle.panels.map((row, i) => {
                 if (i < 1 || puzzle.split < i) return null;
@@ -213,17 +236,37 @@ const App: VFC = () => {
                 );
               })}
             </Grid>
-          </>
-        )}
-        {puzzle.solved() && (
-          <Grid item container justify="center">
-            <Typography component="h1" variant="h5">
-              Congratulations!!
+          )}
+          {puzzle.solved() && (
+            <>
+              <Grid item container justify="center">
+                <Typography component="h1" variant="h5">
+                  完成！！
+                </Typography>
+              </Grid>
+              <Grid item container justify="center">
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  className={classes.twitter}
+                  onClick={tweet}
+                >
+                  Twitterで共有
+                </Button>
+              </Grid>
+            </>
+          )}
+          <Grid item container justify="flex-end">
+            <Typography variant="caption">
+              開発：{' '}
+              <Link href="https://twitter.com/ryochan_metal" target="_blank">
+                @ryochan_metal
+              </Link>
             </Typography>
           </Grid>
-        )}
-      </Grid>
-    </Container>
+        </Grid>
+      </Container>
+    </ThemeProvider>
   );
 };
 
