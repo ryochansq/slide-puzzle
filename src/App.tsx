@@ -8,6 +8,7 @@ import {
   Typography,
 } from '@material-ui/core';
 import { createStyles, makeStyles } from '@material-ui/core/styles';
+import Puzzle from './classes/Puzzle';
 
 const useStyles = makeStyles(() =>
   createStyles({
@@ -41,73 +42,23 @@ const useStyles = makeStyles(() =>
   })
 );
 
-class Panel {
-  i: number;
-
-  j: number;
-
-  split: number;
-
-  constructor(i: number, j: number, split: number) {
-    this.i = i;
-    this.j = j;
-    this.split = split;
-  }
-
-  calcKey = (i: number, j: number) => i * (this.split + 2) + j;
-
-  key = () => this.calcKey(this.i, this.j);
-
-  isRightPosition = (i: number, j: number) => this.calcKey(i, j) === this.key();
-
-  isLowerRight = () => this.i === this.split && this.j === this.split;
-}
-
-const di = [-1, 0, 0, 1];
-const dj = [0, -1, 1, 0];
-
 const App: VFC = () => {
   const classes = useStyles();
   const [imageData, setImageData] = useState<string | undefined>(undefined);
   const [ratio, setRatio] = useState('100%');
-  const [split] = useState(4);
-  const [panels, setPanels] = useState<Panel[][]>([]);
-  const [solved, setSolved] = useState(false);
+  const [puzzle, setPuzzle] = useState<Puzzle>(new Puzzle(4, false));
 
   useEffect(() => {
-    // 初期化
-    setSolved(false);
-    const array = [...Array<Panel[]>(split + 2)].map(() =>
-      Array<Panel>(split + 2).fill(new Panel(-1, -1, split))
-    );
-    for (let i = 0; i < split + 2; i += 1)
-      for (let j = 0; j < split + 2; j += 1)
-        array[i][j] = new Panel(i, j, split);
+    setPuzzle((prevPuzzle) => new Puzzle(prevPuzzle.split, true));
+  }, [imageData]);
 
-    // シャッフル
-    let i = split;
-    let j = split;
-    for (let l = 0; l < 1000; l += 1) {
-      const k = Math.floor(Math.random() * 4);
-      const [ni, nj] = [i + di[k], j + dj[k]];
-      if (ni >= 1 && ni <= split && nj >= 1 && nj <= split) {
-        const p = new Panel(array[i][j].i, array[i][j].j, split);
-        const np = new Panel(array[ni][nj].i, array[ni][nj].j, split);
-        array[ni][nj] = p;
-        array[i][j] = np;
-        [i, j] = [ni, nj];
-      }
-    }
-    setPanels(array);
-  }, [split, imageData]);
-
-  const xs = Math.floor(12 / split) as GridSize;
+  const xs = Math.floor(12 / puzzle.split) as GridSize;
   const buttonText = imageData ? 'Select another image' : 'Select image';
 
   const transform = (i: number, j: number) => {
-    const x = 0.5 - (j - 0.5) / split;
-    const y = 0.5 - (i - 0.5) / split;
-    return `scale(${split}) translate(${x * 100}%, ${y * 100}%) `;
+    const x = 0.5 - (j - 0.5) / puzzle.split;
+    const y = 0.5 - (i - 0.5) / puzzle.split;
+    return `scale(${puzzle.split}) translate(${x * 100}%, ${y * 100}%) `;
   };
 
   const onChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -132,28 +83,9 @@ const App: VFC = () => {
     };
   };
 
-  const judgeSolved = (newPanels: Panel[][]): boolean => {
-    let res = true;
-    for (let i = 0; i < split + 2; i += 1)
-      for (let j = 0; j < split + 2; j += 1)
-        if (!newPanels[i][j].isRightPosition(i, j)) res = false;
-    return res;
-  };
-
   const onClick = (i: number, j: number) => {
-    for (let k = 0; k < 4; k += 1) {
-      const [ni, nj] = [i + di[k], j + dj[k]];
-      if (panels[ni][nj].isLowerRight()) {
-        const newPanels = panels.map((row) =>
-          row.map((panel) => new Panel(panel.i, panel.j, split))
-        );
-        newPanels[i][j] = panels[ni][nj];
-        newPanels[ni][nj] = panels[i][j];
-        setPanels(newPanels);
-        setSolved(judgeSolved(newPanels));
-        return;
-      }
-    }
+    const newPuzzle = puzzle.onClick(i, j);
+    setPuzzle(newPuzzle);
   };
 
   return (
@@ -184,12 +116,12 @@ const App: VFC = () => {
         {imageData && (
           <>
             <Grid item container xs={12}>
-              {panels.map((row, i) => {
-                if (i < 1 || split < i) return null;
+              {puzzle.panels.map((row, i) => {
+                if (i < 1 || puzzle.split < i) return null;
                 return (
                   <Grid item container direction="row" key={row[0].key()}>
                     {row.map((el, j) => {
-                      if (j < 1 || split < j) return null;
+                      if (j < 1 || puzzle.split < j) return null;
                       return (
                         <Grid
                           item
@@ -204,7 +136,7 @@ const App: VFC = () => {
                               paddingTop: ratio,
                             }}
                           >
-                            {(!el.isLowerRight() || solved) && (
+                            {(!el.isLowerRight || puzzle.solved()) && (
                               <>
                                 <img
                                   src={imageData}
@@ -214,7 +146,7 @@ const App: VFC = () => {
                                     transform: transform(el.i, el.j),
                                   }}
                                 />
-                                {!solved && (
+                                {!puzzle.solved() && (
                                   <button
                                     type="button"
                                     className={classes.button}
@@ -235,7 +167,7 @@ const App: VFC = () => {
             </Grid>
           </>
         )}
-        {solved && (
+        {puzzle.solved() && (
           <Grid item container justify="center">
             <Typography component="h1" variant="h5">
               Congratulations!!
