@@ -5,14 +5,13 @@ import {
   createMuiTheme,
   CssBaseline,
   Grid,
-  GridSize,
-  Link,
   ThemeProvider,
   Typography,
 } from '@material-ui/core';
 import { createStyles, makeStyles } from '@material-ui/core/styles';
 import { Transition } from 'react-transition-group';
 import Puzzle from './classes/Puzzle';
+import DifficultyDialog from './components/DifficultyDialog';
 
 const theme = createMuiTheme({
   palette: {
@@ -73,15 +72,15 @@ const App: VFC = () => {
   const classes = useStyles();
   const [imageData, setImageData] = useState<string | undefined>(undefined);
   const [ratio, setRatio] = useState('100%');
-  const [puzzle, setPuzzle] = useState<Puzzle>(new Puzzle(4, false));
+  const [split, setSplit] = useState(4);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [puzzle, setPuzzle] = useState<Puzzle>(new Puzzle(split, true));
   const [trans, setTrans] = useState<Trans>({ i: -1, j: -1, di: 0, dj: 0 });
 
-  useEffect(() => {
-    setPuzzle((prevPuzzle) => new Puzzle(prevPuzzle.split, true));
-  }, [imageData]);
+  useEffect(() => setPuzzle(new Puzzle(split, true)), [imageData, split]);
 
   const duration = 100;
-  const xs = Math.floor(12 / puzzle.split) as GridSize;
+  const panelWidth = `${100 / puzzle.split}%`;
   const buttonText = imageData ? '別の画像を選択' : 'パズルにしたい画像を選択';
 
   const imgTransform = (i: number, j: number) => {
@@ -106,6 +105,7 @@ const App: VFC = () => {
     const file = files && files.length ? files[0] : null;
     if (!file) return;
 
+    setImageData(undefined);
     const img = new Image();
     img.onload = () => {
       URL.revokeObjectURL(img.src);
@@ -120,6 +120,8 @@ const App: VFC = () => {
 
       setImageData(result as string);
     };
+    e.target.value = '';
+    setIsDialogOpen(true);
   };
 
   const onClick = (i: number, j: number) => {
@@ -135,7 +137,12 @@ const App: VFC = () => {
   };
 
   const tweet = () => {
-    const text = `スライドパズルを完成させました！\n\nryochansq.github.io/slide-puzzle/\n\n#なんでもスライドパズル`;
+    const difficulty = (() => {
+      if (split === 3) return 'かんたん';
+      if (split === 4) return 'ふつう';
+      return 'むずかしい';
+    })();
+    const text = `スライドパズル(${difficulty})を完成させました！\n\nryochansq.github.io/slide-puzzle/\n\n#なんでもスライドパズル`;
     const encodedText = encodeURIComponent(text);
     const intent = `https://twitter.com/intent/tweet?text=${encodedText}`;
     window.open(intent);
@@ -192,11 +199,11 @@ const App: VFC = () => {
                             <Grid
                               item
                               container
-                              xs={xs}
                               justify="center"
                               style={{
                                 transition: gridTransition(state),
                                 transform: gridTransform(state),
+                                width: panelWidth,
                               }}
                             >
                               <div
@@ -256,16 +263,14 @@ const App: VFC = () => {
               </Grid>
             </>
           )}
-          <Grid item container justify="flex-end">
-            <Typography variant="caption">
-              開発：{' '}
-              <Link href="https://twitter.com/ryochan_metal" target="_blank">
-                @ryochan_metal
-              </Link>
-            </Typography>
-          </Grid>
         </Grid>
       </Container>
+      <DifficultyDialog
+        isDialogOpen={isDialogOpen}
+        setIsDialogOpen={setIsDialogOpen}
+        split={split}
+        setSplit={setSplit}
+      />
     </ThemeProvider>
   );
 };

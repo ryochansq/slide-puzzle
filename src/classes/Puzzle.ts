@@ -13,15 +13,17 @@ export default class Puzzle {
     const array = [...Array<Panel[]>(split + 2)].map(() =>
       Array<Panel>(split + 2).fill(new Panel(-1, -1, false))
     );
-    for (let i = 0; i < split + 2; i += 1)
-      for (let j = 0; j < split + 2; j += 1)
+    array.forEach((row, i) =>
+      row.forEach((el, j) => {
         array[i][j] = new Panel(i, j, i === split && j === split);
+      })
+    );
 
     // シャッフル
     if (shuffle) {
       let i = split;
       let j = split;
-      for (let l = 0; l < 1000; l += 1) {
+      for (let l = 0; l < 10000; l += 1) {
         const k = Math.floor(Math.random() * 4);
         const [ni, nj] = [i + di[k], j + dj[k]];
         if (ni >= 1 && ni <= split && nj >= 1 && nj <= split) {
